@@ -1,0 +1,16 @@
+#!/usr/bin/python2
+
+import time
+import sys
+
+from growd.hardware import Raspberry, Relay
+
+with Raspberry() as rpi:
+    relay = Relay(rpi, 16)
+
+    st = True
+    while True:
+        time.sleep(2)
+        print 'Setting to %s' % st
+        relay.switch(st)
+        st ^= True

@@ -10,7 +10,7 @@ setup(
     author='Martin Milata',
     author_email='b42@srck.net',
     packages=find_packages(),
-    scripts=[],
+    scripts=['bin/growd-test'],
     install_requires=[],
     test_suite='nose.collector',
     tests_require=['nose'],
