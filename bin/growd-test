@@ -11,6 +11,6 @@ with Raspberry() as rpi:
     st = True
     while True:
         time.sleep(2)
-        print 'Setting to %s' % st
+        print 'Relay: %s' % st
         relay.switch(st)
         st ^= True
