@@ -1,7 +1,8 @@
 import unittest
 from nose.tools import *
 
-from growd.hardware import Relay, Board
+from growd.hw.raspberry import Board
+from growd.hw.relay import Relay
 
 class MockBerry(Board):
     def __init__(self):

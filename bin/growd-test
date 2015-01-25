@@ -3,7 +3,8 @@
 import time
 import sys
 
-from growd.hardware import Raspberry, Relay
+from growd.hw.raspberry import Raspberry
+from growd.hw.relay import Relay
 
 with Raspberry() as rpi:
     relay = Relay(rpi, 16)
