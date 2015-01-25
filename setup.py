@@ -10,7 +10,7 @@ setup(
     author='Martin Milata',
     author_email='b42@srck.net',
     packages=find_packages(),
-    scripts=['bin/growd-test'],
+    scripts=['bin/growd-test', 'bin/growd-tempsender'],
     install_requires=[],
     test_suite='nose.collector',
     tests_require=['nose'],

@@ -1,0 +1,29 @@
+#!/usr/bin/python2
+
+import os
+import time
+import requests
+import traceback
+
+from growd.hw.raspberry import Raspberry
+from growd.hw.sht21 import SHT21
+
+URL = os.environ['GROWD_TEMP_URL']
+
+with Raspberry() as rpi:
+    rpi.i2c_setup()
+    sht21 = SHT21(rpi.i2c[1])
+
+    while True:
+        try:
+            temp = sht21.read_temperature()
+            hum = sht21.read_humidity()
+            r = requests.get(URL, params={'temp': temp, 'hum': hum})
+
+            print 'T: %.2f C  H: %.2f %%' % (temp, hum)
+            time.sleep(2)
+        except KeyboardInterrupt:
+            print 'User requested exit'
+            break
+        except Exception as e:
+            traceback.print_exc()

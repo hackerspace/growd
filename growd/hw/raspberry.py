@@ -1,4 +1,5 @@
 import sys
+import fcntl
 
 try:
     import RPi.GPIO as GPIO
@@ -29,11 +30,29 @@ class Raspberry(Board):
 
         GPIO.setmode(GPIO.BOARD)
 
+        self.i2c = {}
+        self.gpios_set_up = False #avoid warning on cleanup
+
     def gpio_setup(self, num, is_output):
         GPIO.setup(num, GPIO.OUT if is_output else GPIO.IN)
+        self.gpios_set_up = True
 
     def gpio_set(self, num, value):
         GPIO.output(num, value)
 
+    def i2c_setup(self):
+        #From: /linux/i2c-dev.h
+        I2C_SLAVE = 0x0703
+        I2C_SLAVE_FORCE = 0x0706
+
+        device_number = 1
+        i2c = open('/dev/i2c-%s' % device_number, 'r+', 0)
+        fcntl.ioctl(i2c, I2C_SLAVE, 0x40)
+        self.i2c[device_number] = i2c
+
     def cleanup(self):
-        GPIO.cleanup()
+        for i2c_num in self.i2c.keys():
+            self.i2c.pop(i2c_num).close()
+
+        if self.gpios_set_up:
+            GPIO.cleanup()
