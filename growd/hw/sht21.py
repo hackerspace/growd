@@ -38,6 +38,10 @@ class SHT21(object):
     _TRIGGER_HUMIDITY_NO_HOLD = 0xF5
     _STATUS_BITS_MASK = 0xFFFC
 
+    #datasheet (v4), page 9, table 7
+    _TEMPERATURE_WAIT_TIME = 0.086 #(datasheet: typ=66, max=85)
+    _HUMIDITY_WAIT_TIME = 0.030    #(datasheet: typ=22, max=29)
+
     def __init__(self, i2c):
         """Opens the i2c device (assuming that the kernel modules have been
         loaded)."""
@@ -46,19 +50,19 @@ class SHT21(object):
         time.sleep(0.050)
 
     def read_temperature(self):
-        """Reads the temperature from the sensor.  Not that this call blocks
-        for 250ms to allow the sensor to return the data"""
+        """Reads the temperature from the sensor.  Note that this call blocks
+        for ~90ms to allow the sensor to return the data"""
         self.i2c.write(chr(self._TRIGGER_TEMPERATURE_NO_HOLD))
-        time.sleep(0.250)
+        time.sleep(self._TEMPERATURE_WAIT_TIME)
         data = self.i2c.read(3)
         if _calculate_checksum(data,2) == ord(data[2]):
             return _get_temperature_from_buffer(data)
 
     def read_humidity(self):
-        """Reads the humidity from the sensor.  Not that this call blocks
-        for 250ms to allow the sensor to return the data"""
+        """Reads the humidity from the sensor.  Note that this call blocks
+        for ~30ms to allow the sensor to return the data"""
         self.i2c.write(chr(self._TRIGGER_HUMIDITY_NO_HOLD))
-        time.sleep(0.250)
+        time.sleep(self._HUMIDITY_WAIT_TIME)
         data = self.i2c.read(3)
         if _calculate_checksum(data,2) == ord(data[2]):
             return _get_humidity_from_buffer(data)
