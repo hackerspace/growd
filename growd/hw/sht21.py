@@ -36,6 +36,7 @@ class SHT21(object):
     _SOFTRESET = 0xFE
     _TRIGGER_TEMPERATURE_NO_HOLD = 0xF3
     _TRIGGER_HUMIDITY_NO_HOLD = 0xF5
+    _STATUS_BITS_MASK = 0xFFFC
 
     def __init__(self, i2c):
         """Opens the i2c device (assuming that the kernel modules have been
@@ -86,6 +87,7 @@ def _get_temperature_from_buffer(data):
     where ST is the value from the sensor
     """
     unadjusted = (ord(data[0]) << 8) + ord(data[1])
+    unadjusted &= SHT21._STATUS_BITS_MASK # zero the status bits
     unadjusted *= 175.72
     unadjusted /= 1 << 16 # divide by 2^16
     unadjusted -= 46.85
@@ -99,6 +101,7 @@ def _get_humidity_from_buffer(data):
     where SRH is the value read from the sensor
     """
     unadjusted = (ord(data[0]) << 8) + ord(data[1])
+    unadjusted &= SHT21._STATUS_BITS_MASK # zero the status bits
     unadjusted *= 125.0
     unadjusted /= 1 << 16 # divide by 2^16
     unadjusted -= 6

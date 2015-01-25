@@ -27,7 +27,8 @@
 import unittest
 from nose.tools import *
 
-from growd.hw.sht21 import _get_temperature_from_buffer, _calculate_checksum
+from growd.hw.sht21 import (_get_temperature_from_buffer,
+        _get_humidity_from_buffer, _calculate_checksum)
 
 class SHT21Test(unittest.TestCase):
     """simple sanity test"""
@@ -36,9 +37,15 @@ class SHT21Test(unittest.TestCase):
         """Unit test to check the checksum method"""
         calc_temp = _get_temperature_from_buffer([chr(99),chr(172)])
         #floating point comparison, not pretty.
-        self.failUnless(abs(calc_temp - 21.5653979492) < 0.1)
+        assert_almost_equal(calc_temp, 21.5653979492)
+
+    def test_humidity(self):
+        """Unit test to check the humidity computation using example
+        from the v4 datasheet"""
+        calc_temp = _get_humidity_from_buffer([chr(99),chr(82)])
+        assert_almost_equal(calc_temp, 42.4924316)
 
     def test_checksum(self):
         """Unit test to check the checksum method.  Uses values read"""
-        self.failUnless(_calculate_checksum([chr(99),chr(172)] , 2) == 249)
-        self.failUnless(_calculate_checksum([chr(99),chr(160)] , 2) == 132)
+        assert_equal(_calculate_checksum([chr(99),chr(172)] , 2), 249)
+        assert_equal(_calculate_checksum([chr(99),chr(160)] , 2), 132)
