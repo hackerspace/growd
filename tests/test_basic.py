@@ -3,6 +3,7 @@ from nose.tools import *
 
 from growd.hw.raspberry import Board
 from growd.hw.relay import Relay
+from growd.utils import dew_point
 
 class MockBerry(Board):
     def __init__(self):
@@ -34,3 +35,10 @@ class TestPi(unittest.TestCase):
         assert_equal(self.pi.pins[5], True)
         relay.switch(False)
         assert_equal(self.pi.pins[5], False)
+
+class TestUtils(unittest.TestCase):
+    def test_dew_point(self):
+        assert_almost_equal(dew_point(42.0, 100.0), 42.0)
+        assert_almost_equal(dew_point(12.0, 100.0), 12.0)
+        assert_almost_equal(dew_point(25.0, 40.0), 10.45726068)
+        assert_almost_equal(dew_point(28.0, 35.0), 11.1082555)
