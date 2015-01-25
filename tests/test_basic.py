@@ -1,3 +1,4 @@
+import unittest
 from nose.tools import *
 
 from growd.hardware import Relay, Board
@@ -8,24 +9,27 @@ class MockBerry(Board):
 
     def gpio_setup(self, num, is_output):
         assert_equal(is_output, True) # don't need inputs for now
+        self.pins[num] = None
 
     def gpio_set(self, num, value):
         assert_is_instance(num, int)
         assert_is_instance(value, bool)
+        assert_in(num, self.pins, 'Pin not set up')
         self.pins[num] = value
 
-def setup():
-    pass
+class TestPi(unittest.TestCase):
+    def setUp(self):
+        self.pi = MockBerry()
 
-def teardown():
-    pass
+    def tearDown(self):
+        self.pi.cleanup()
 
-def test_sanity():
-    assert(True)
-
-def test_relay():
-    with MockBerry() as pi:
-        relay = Relay(pi, 5)
-        assert_equal(pi.pins[5], False)
+    def test_relay(self):
+        relay = Relay(self.pi, 5)
+        assert_equal(self.pi.pins[5], False)
         relay.switch(True)
-        assert_equal(pi.pins[5], True)
+        assert_equal(self.pi.pins[5], True)
+        relay.switch(True)
+        assert_equal(self.pi.pins[5], True)
+        relay.switch(False)
+        assert_equal(self.pi.pins[5], False)
