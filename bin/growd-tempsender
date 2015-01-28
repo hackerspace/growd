@@ -1,29 +1,44 @@
 #!/usr/bin/python2
 
-import os
+import sys
 import time
+import logging
+import argparse
 import requests
-import traceback
 
 from growd.hw.raspberry import Raspberry
 from growd.hw.sht21 import SHT21
+import growd.utils
 
-URL = os.environ['GROWD_TEMP_URL']
+def main(args):
+    parser = argparse.ArgumentParser(prog='growd-tempsender')
+    parser.add_argument('-u', '--url', type=str, help='simple-sensor-graph URL')
+    parser.add_argument('-v', '--verbose', action='store_true', help='print uninteresting info')
+    opts = parser.parse_args(args)
 
-with Raspberry() as rpi:
-    rpi.i2c_setup()
-    sht21 = SHT21(rpi.i2c[1])
+    growd.utils.setup_logging(verbose=opts.verbose)
 
-    while True:
-        try:
-            temp = sht21.read_temperature()
-            hum = sht21.read_humidity()
-            r = requests.get(URL, params={'temp': temp, 'hum': hum})
+    if not opts.url:
+        logging.critical('No server URL provided')
+        sys.exit(1)
 
-            print 'T: %.2f C  H: %.2f %%' % (temp, hum)
-            time.sleep(2)
-        except KeyboardInterrupt:
-            print 'User requested exit'
-            break
-        except Exception as e:
-            traceback.print_exc()
+    with Raspberry() as rpi:
+        rpi.i2c_setup()
+        sht21 = SHT21(rpi.i2c[1])
+
+        while True:
+            try:
+                temp = sht21.read_temperature()
+                hum = sht21.read_humidity()
+                r = requests.get(opts.url, params={'temp': temp, 'hum': hum})
+
+                logging.debug('T: %.2f C, H: %.2f %%' % (temp, hum))
+                time.sleep(2)
+            except KeyboardInterrupt:
+                logging.info('User requested exit')
+                break
+            except Exception as e:
+                logging.exception('Main loop error')
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

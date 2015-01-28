@@ -1,12 +1,14 @@
-import sys
 import fcntl
+import logging
+
+logger = logging.getLogger('raspberry')
 
 try:
     import RPi.GPIO as GPIO
 except ImportError:
-    sys.stderr.write('RPi.GPIO not found!')
+    logger.error('RPi.GPIO not found!')
 except RuntimeError:
-    sys.stderr.write('Error importing RPi.GPIO! You probably need to run this as root.')
+    logger.error('Error importing RPi.GPIO! You probably need to run this as root.')
 
 class Board(object):
     def __init__(self):

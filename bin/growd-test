@@ -1,17 +1,25 @@
 #!/usr/bin/python2
 
-import time
 import sys
+import time
+import logging
 
 from growd.hw.raspberry import Raspberry
 from growd.hw.relay import Relay
+import growd.utils
 
-with Raspberry() as rpi:
-    relay = Relay(rpi, 16)
+def main():
+    growd.utils.setup_logging(verbose=True)
 
-    st = True
-    while True:
-        time.sleep(2)
-        print 'Relay: %s' % st
-        relay.switch(st)
-        st ^= True
+    with Raspberry() as rpi:
+        relay = Relay(rpi, 16)
+
+        st = True
+        while True:
+            time.sleep(2)
+            logging.info('Relay: %s' % st)
+            relay.switch(st)
+            st ^= True
+
+if __name__ == '__main__':
+    main()
