@@ -4,22 +4,18 @@ import sys
 import time
 import logging
 
-from growd.hw.raspberry import Raspberry
-from growd.hw.relay import Relay
+from growd.hw.watchdog import Watchdog
 import growd.utils
 
 def main():
     growd.utils.setup_logging(verbose=True)
 
-    with Raspberry() as rpi:
-        relay = Relay(rpi, 16)
-
-        st = True
-        while True:
+    with Watchdog() as dog:
+        for i in range(30):
+            logging.info('Feeding the dog')
+            dog.keepalive()
             time.sleep(2)
-            logging.info('Relay: %s' % st)
-            relay.switch(st)
-            st ^= True
+
 
 if __name__ == '__main__':
     main()
