@@ -1,0 +1,78 @@
+#!/usr/bin/python2
+
+import sys
+import time
+import logging
+import argparse
+import requests
+
+from growd.hw.raspberry import Raspberry
+from growd.hw.sht21 import SHT21
+from growd.hw.relay import Relay
+import growd.utils
+
+IRRIGATION_PERIOD = 5 * 60 # minutes
+IRRIGATION_DURATION = 5 # seconds
+SAMPLING_PERIOD = 2 # seconds
+
+def read_and_send_sensors(temp_sensor, hum_sensor, url):
+    temp = temp_sensor.read_temperature()
+    hum = hum_sensor.read_humidity()
+    r = requests.get(url, params={'temp': temp, 'hum': hum})
+
+    logging.debug('T: %.2f C, H: %.2f %%' % (temp, hum))
+
+
+def main(args):
+    parser = argparse.ArgumentParser(prog='growd-tempsender')
+    parser.add_argument('-u', '--url', type=str, help='simple-sensor-graph URL')
+    parser.add_argument('-v', '--verbose', action='store_true', help='print uninteresting info')
+    parser.add_argument('--sampling-period', type=int, default=SAMPLING_PERIOD, help='take temp/hum measurement every ? seconds')
+    parser.add_argument('--irrigation-period', type=int, default=IRRIGATION_PERIOD, help='irrigate every ? seconds')
+    parser.add_argument('--irrigation-duration', type=int, default=IRRIGATION_DURATION, help='how long to irrigate every period')
+    parser.add_argument('--irrigation-relay', type=int, default=2, help='relay used for irrigation')
+    opts = parser.parse_args(args)
+
+    growd.utils.setup_logging(verbose=opts.verbose)
+
+    if not opts.url:
+        logging.critical('No server URL provided')
+        sys.exit(1)
+
+    last_irrigation = 0
+
+    with Raspberry() as rpi:
+        rpi.i2c_setup()
+        sht21 = SHT21(rpi.i2c[1])
+        relays = [
+            Relay(rpi, 16),
+            Relay(rpi, 18),
+            Relay(rpi, 22) ]
+        irrigation_relay = relays[opts.irrigation_relay]
+
+        while True:
+            try:
+                ts = int(time.time())
+
+                if ts - last_irrigation > opts.irrigation_period:
+                    logging.debug('Irrigation on')
+                    irrigation_relay.switch(True)
+                    time.sleep(opts.irrigation_duration)
+                    irrigation_relay.switch(False)
+                    logging.debug('Irrigation off')
+                    last_irrigation = ts
+
+                try:
+                    read_and_send_sensors(sht21, sht21, opts.url)
+                except:
+                    logging.exception('Failed to read sensors')
+
+                time.sleep(opts.sampling_period)
+            except KeyboardInterrupt:
+                logging.info('User requested exit')
+                break
+            except Exception as e:
+                logging.exception('Main loop error')
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
