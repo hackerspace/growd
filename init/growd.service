@@ -1,0 +1,12 @@
+[Unit]
+Description=Plant monitoring and control daemon
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/growd-main
+Restart=on-failure
+RestartSec=10
+#WatchdogSec=
+
+[Install]
+WantedBy=multi-user.target
