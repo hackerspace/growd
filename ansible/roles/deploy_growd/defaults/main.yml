@@ -1,0 +1,4 @@
+---
+ssh_port: 22
+deployed_git_dir: "{{ ansible_env.HOME }}/{{ repo_name }}"
+deployment_branch: deploy

@@ -1,0 +1,9 @@
+---
+#TODO: uninstall?
+
+- name: install python package for development
+  command: python setup.py develop
+  args:
+    chdir: "{{ repo_path }}"
+
+# copy systemd

@@ -1,0 +1,20 @@
+---
+- name: system setup
+  hosts: all
+  sudo: true
+  roles:
+  - system_setup
+  tags:
+  - system_setup
+
+- name: deploy git repo
+  hosts: all
+  roles:
+  - { role: deploy_growd, local_git_dir: "..", repo_name: growd }
+
+- name: install growd
+  hosts: all
+  sudo: true
+  sudo_user: root
+  roles:
+  - { role: install_growd, repo_path: "/home/pi/growd" }
