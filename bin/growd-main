@@ -4,6 +4,9 @@ import sys
 import time
 import logging
 import argparse
+import datetime
+
+import yaml
 import requests
 
 from growd.hw.raspberry import Raspberry
@@ -25,45 +28,66 @@ def read_and_send_sensors(temp_sensor, hum_sensor, url):
 
 def main(args):
     parser = argparse.ArgumentParser(prog='growd-tempsender')
-    parser.add_argument('-u', '--url', type=str, help='simple-sensor-graph URL')
     parser.add_argument('-v', '--verbose', action='store_true', help='print uninteresting info')
     parser.add_argument('--sampling-period', type=int, default=SAMPLING_PERIOD, help='take temp/hum measurement every ? seconds')
-    parser.add_argument('--irrigation-period', type=int, default=IRRIGATION_PERIOD, help='irrigate every ? seconds')
-    parser.add_argument('--irrigation-duration', type=int, default=IRRIGATION_DURATION, help='how long to irrigate every period')
-    parser.add_argument('--irrigation-relay', type=int, default=2, help='relay used for irrigation')
+    parser.add_argument('-c', '--config', type=str, help='path to configuration file')
     opts = parser.parse_args(args)
 
     growd.utils.setup_logging(verbose=opts.verbose)
 
-    if not opts.url:
-        logging.critical('No server URL provided')
+    if not opts.config:
+        logging.critical('Need configuration file')
         sys.exit(1)
 
-    last_irrigation = 0
+    with open(opts.config, 'r') as fh:
+        config = yaml.safe_load(fh)
+
+    if not config['server_url']:
+        logging.critical('No server URL provided')
+        sys.exit(1)
 
     with Raspberry() as rpi:
         rpi.i2c_setup()
         sht21 = SHT21(rpi.i2c[1])
-        relays = [
-            Relay(rpi, 16),
-            Relay(rpi, 18),
-            Relay(rpi, 22) ]
-        irrigation_relay = relays[opts.irrigation_relay]
+
+        relay = {}
+        relay_state = {}
+        for r in config['relays']:
+            relay[r['name']] = Relay(rpi, r['pin'])
+            relay_state[r['name']] = False
 
         while True:
             try:
-                ts = int(time.time())
+                now = datetime.datetime.now().time()
 
-                if ts - last_irrigation > opts.irrigation_period:
-                    logging.debug('Irrigation on')
-                    irrigation_relay.switch(True)
-                    time.sleep(opts.irrigation_duration)
-                    irrigation_relay.switch(False)
-                    logging.debug('Irrigation off')
-                    last_irrigation = ts
+                for r in relay.keys():
+                    desired_state = False
+
+                    for t in config['timers']:
+                        if t['relay'] != r:
+                            continue
+
+                        h, m, s = t['from'].split(':')
+                        fro = datetime.time(int(h), int(m), int(s))
+
+                        h, m, s = t['to'].split(':')
+                        to = datetime.time(int(h), int(m), int(s))
+
+                        # TODO: handle intervals that cross midnight
+                        if fro < now and now < to:
+                            desired_state = True
+
+                    if relay_state[r] == False and desired_state == True:
+                        logging.info('Enabling relay {0}'.format(r))
+                        relay[r].switch(True)
+                        relay_state[r] = True
+                    elif relay_state[r] == True and desired_state == False:
+                        logging.info('Disabling relay {0}'.format(r))
+                        relay[r].switch(False)
+                        relay_state[r] = False
 
                 try:
-                    read_and_send_sensors(sht21, sht21, opts.url)
+                    read_and_send_sensors(sht21, sht21, config['server_url'])
                 except:
                     logging.exception('Failed to read sensors')
 
