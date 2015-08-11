@@ -18,6 +18,8 @@
   - vim
   - tmux
   - python-setuptools
+  - python-yaml
+  - python-requests
 
 - name: remove unneeded stuff
   apt: name={{ item }} state=absent purge=yes
