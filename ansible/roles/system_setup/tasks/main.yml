@@ -10,7 +10,7 @@
   apt: name=systemd state=present
 
 - name: enable systemd
-  copy: src=cmdline.txt dest=/boot/cmdline.txt owner=root group=root mode=755 backup=yes
+  copy: src=cmdline.txt dest=/boot/cmdline.txt owner=root group=root mode=755
 
 - name: install needed packages
   apt: name={{ item }} state=present
