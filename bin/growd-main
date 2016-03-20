@@ -7,23 +7,23 @@ import argparse
 import datetime
 
 import yaml
-import requests
 
 from growd.hw.raspberry import Raspberry
 from growd.hw.sht21 import SHT21
 from growd.hw.relay import Relay
+from growd.metrics.simple import SimpleMetrics
 import growd.utils
 
-IRRIGATION_PERIOD = 5 * 60 # minutes
-IRRIGATION_DURATION = 5 # seconds
 SAMPLING_PERIOD = 2 # seconds
 
-def read_and_send_sensors(temp_sensor, hum_sensor, url):
+def read_and_send_sensors(temp_sensor, hum_sensor, metrics_receivers):
     temp = temp_sensor.read_temperature()
     hum = hum_sensor.read_humidity()
-    r = requests.get(url, params={'temp': temp, 'hum': hum})
-
     logging.debug('T: %.2f C, H: %.2f %%' % (temp, hum))
+
+    for m in metrics_receivers:
+        #TODO: try-catch?
+        m.send(temp, hum)
 
 
 def main(args):
@@ -56,6 +56,8 @@ def main(args):
             relay[r['name']] = Relay(rpi, r['pin'])
             relay_state[r['name']] = False
 
+        simple_metrics = SimpleMetrics(config['server_url'])
+
         while True:
             try:
                 now = datetime.datetime.now().time()
@@ -87,7 +89,7 @@ def main(args):
                         relay_state[r] = False
 
                 try:
-                    read_and_send_sensors(sht21, sht21, config['server_url'])
+                    read_and_send_sensors(sht21, sht21, [simple_metrics])
                 except:
                     logging.exception('Failed to read sensors')
 
