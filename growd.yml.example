@@ -1,5 +1,10 @@
 ---
-server_url: http://example.com
+metrics:
+  - type: simple
+    url: http://example.com
+  - type: carbon
+    id: greenhouse1
+    host: 127.0.0.1
 relays:
   - name: pump
     pin: 22

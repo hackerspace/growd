@@ -12,9 +12,21 @@ from growd.hw.raspberry import Raspberry
 from growd.hw.sht21 import SHT21
 from growd.hw.relay import Relay
 from growd.metrics.simple import SimpleMetrics
+from growd.metrics.carbon import CarbonMetrics
 import growd.utils
 
 SAMPLING_PERIOD = 2 # seconds
+
+def init_metrics(config):
+    metrics = []
+
+    for m in config.get('metrics', []):
+        if m['type'] == 'simple':
+            metrics.append(SimpleMetrics(m['url']))
+        elif m['type'] == 'carbon':
+            metrics.append(CarbonMetrics(m['host'], ident=m.get('id')))
+
+    return metrics
 
 def read_and_send_sensors(temp_sensor, hum_sensor, metrics_receivers):
     temp = temp_sensor.read_temperature()
@@ -42,9 +54,7 @@ def main(args):
     with open(opts.config, 'r') as fh:
         config = yaml.safe_load(fh)
 
-    if not config['server_url']:
-        logging.critical('No server URL provided')
-        sys.exit(1)
+    metrics_receivers = init_metrics(config)
 
     with Raspberry() as rpi:
         rpi.i2c_setup()
@@ -55,8 +65,6 @@ def main(args):
         for r in config['relays']:
             relay[r['name']] = Relay(rpi, r['pin'])
             relay_state[r['name']] = False
-
-        simple_metrics = SimpleMetrics(config['server_url'])
 
         while True:
             try:
@@ -89,7 +97,7 @@ def main(args):
                         relay_state[r] = False
 
                 try:
-                    read_and_send_sensors(sht21, sht21, [simple_metrics])
+                    read_and_send_sensors(sht21, sht21, metrics_receivers)
                 except:
                     logging.exception('Failed to read sensors')
 
