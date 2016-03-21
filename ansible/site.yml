@@ -2,6 +2,8 @@
 - name: system setup
   hosts: all
   sudo: true
+  vars:
+    timezone: Europe/Vienna
   roles:
   - system_setup
   tags:
