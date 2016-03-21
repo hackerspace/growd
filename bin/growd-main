@@ -28,14 +28,19 @@ def init_metrics(config):
 
     return metrics
 
-def read_and_send_sensors(temp_sensor, hum_sensor, metrics_receivers):
+def read_and_send_sensors(temp_sensor, hum_sensor, relay_state, metrics_receivers):
     temp = temp_sensor.read_temperature()
     hum = hum_sensor.read_humidity()
     logging.debug('T: %.2f C, H: %.2f %%' % (temp, hum))
 
+    sensors = {
+        'temp': temp,
+        'hum': hum,
+    }
+
     for m in metrics_receivers:
         #TODO: try-catch?
-        m.send(temp, hum)
+        m.send(sensors.copy(), relay_state.copy())
 
 
 def main(args):
@@ -97,7 +102,7 @@ def main(args):
                         relay_state[r] = False
 
                 try:
-                    read_and_send_sensors(sht21, sht21, metrics_receivers)
+                    read_and_send_sensors(sht21, sht21, relay_state, metrics_receivers)
                 except:
                     logging.exception('Failed to read sensors')
 
