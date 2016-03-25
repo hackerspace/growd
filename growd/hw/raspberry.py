@@ -1,5 +1,6 @@
-import fcntl
 import logging
+
+from growd.hw.i2c import I2CBus
 
 logger = logging.getLogger('raspberry')
 
@@ -43,18 +44,13 @@ class Raspberry(Board):
         GPIO.output(num, value)
 
     def i2c_setup(self):
-        #From: /linux/i2c-dev.h
-        I2C_SLAVE = 0x0703
-        I2C_SLAVE_FORCE = 0x0706
-
         device_number = 1
-        i2c = open('/dev/i2c-%s' % device_number, 'r+', 0)
-        fcntl.ioctl(i2c, I2C_SLAVE, 0x40)
+        i2c = I2CBus('/dev/i2c-%s' % device_number)
         self.i2c[device_number] = i2c
 
     def cleanup(self):
         for i2c_num in self.i2c.keys():
-            self.i2c.pop(i2c_num).close()
+            self.i2c.pop(i2c_num).cleanup()
 
         if self.gpios_set_up:
             GPIO.cleanup()

@@ -46,12 +46,14 @@ class SHT21(object):
         """Opens the i2c device (assuming that the kernel modules have been
         loaded)."""
         self.i2c = i2c
+        self.i2c.set_address(self._I2C_ADDRESS)
         self.i2c.write(chr(self._SOFTRESET))
         time.sleep(0.050)
 
     def read_temperature(self):
         """Reads the temperature from the sensor.  Note that this call blocks
         for ~90ms to allow the sensor to return the data"""
+        self.i2c.set_address(self._I2C_ADDRESS)
         self.i2c.write(chr(self._TRIGGER_TEMPERATURE_NO_HOLD))
         time.sleep(self._TEMPERATURE_WAIT_TIME)
         data = self.i2c.read(3)
@@ -61,6 +63,7 @@ class SHT21(object):
     def read_humidity(self):
         """Reads the humidity from the sensor.  Note that this call blocks
         for ~30ms to allow the sensor to return the data"""
+        self.i2c.set_address(_self.I2C_ADDRESS)
         self.i2c.write(chr(self._TRIGGER_HUMIDITY_NO_HOLD))
         time.sleep(self._HUMIDITY_WAIT_TIME)
         data = self.i2c.read(3)
