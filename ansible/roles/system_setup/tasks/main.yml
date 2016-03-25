@@ -17,6 +17,7 @@
   - python-setuptools
   - python-yaml
   - python-requests
+  - i2c-tools
 
 #- name: remove unneeded stuff
 #  apt: name={{ item }} state=absent purge=yes
