@@ -1,0 +1,161 @@
+#!/usr/bin/python2
+
+import sys
+import time
+import logging
+import argparse
+import datetime
+
+import yaml
+
+from growd.hw.raspberry import Raspberry
+from growd.hw.ezo_ph import EzoPH
+from growd.metrics.simple import SimpleMetrics
+from growd.metrics.carbon import CarbonMetrics
+import growd.utils
+
+SAMPLING_PERIOD = 2 # seconds
+
+def init_metrics(config):
+    metrics = []
+
+    for m in config.get('metrics', []):
+        if m['type'] == 'simple':
+            metrics.append(SimpleMetrics(m['url']))
+        elif m['type'] == 'carbon':
+            metrics.append(CarbonMetrics(m['host'], ident=m.get('id')))
+
+    return metrics
+
+def read_and_send_sensors(ph_sensor, metrics_receivers):
+    ph = ph_sensor.read_ph()
+    logging.info('pH: %.2f' % ph)
+
+    sensors = {'ph': ph}
+
+    for m in metrics_receivers:
+        #TODO: try-catch?
+        m.send(sensors.copy(), {})
+
+def _wait_and_measure(ph, wait_sec=3*60, reading_interval=15):
+    while wait_sec > 0:
+        logging.info('pH: %.2f' % ph.read_ph())
+        time.sleep(min(wait_sec, reading_interval))
+        wait_sec -= reading_interval
+
+def _calibrate_point(ph, point_name, point_near, callback, optional=False):
+    print ("*** Rinse the probe and sumberge it into the {0}POINT ({1}) solution. "
+           "Enter its pH value below.".format(point_name.upper(), point_near))
+    if optional:
+        print "*** This step is optional, press Enter to skip it."
+    print ""
+    reference_ph = raw_input("{0}point pH> ".format(point_name.lower()))
+    if optional and reference_ph == "":
+        return
+    reference_ph = float(reference_ph)
+    print ""
+    print "Waiting 3 minutes before calibration. Press Ctrl-C to cancel."
+    _wait_and_measure(ph)
+    callback(reference_ph)
+    print "Calibrated against {0}point pH = {1}".format(point_name.lower(), reference_ph)
+    print ""
+
+def _cal_status_str(cal_status):
+    if cal_status == 0:
+        return "not calibrated"
+    return "{0}-point calibration".format(cal_status)
+
+def _print_device_info(ph):
+    status = ph.read_status()
+    info = ph.read_info()
+    temp_compensation = ph.read_temp_compensation()
+    cal_status = ph.read_calibration_status()
+    slope = ph.read_slope()
+
+    print "Device info:"
+    print "  Restart reason: {0}".format(status.restart_reason)
+    print "  VCC voltage: {0} V".format(status.vcc)
+    print "  Device type: {0}".format(info.dev_type)
+    print "  Firmware version: {0}".format(info.fw_version)
+    print "  Calibration status: {0}".format(_cal_status_str(cal_status))
+    print "  Calibration slope: acid: {0}, base: {1}".format(slope.acid, slope.base)
+    print "  Temperature compensation: {0} C".format(temp_compensation)
+
+def calibrate(ph):
+    reference_ph = None
+
+    _print_device_info(ph)
+    print ""
+    print "!!! Calibrating the midpoint resets all previous calibration data."
+    _calibrate_point(ph, "mid", 7, ph.calibrate_mid, optional=False)
+    _calibrate_point(ph, "low", 4, ph.calibrate_low, optional=True)
+    _calibrate_point(ph, "high", 10, ph.calibrate_low, optional=True)
+    print "*** Sensor has been calibrated!"
+    cal_status = ph.read_calibration_status()
+    print "Calibration: {0}".format(_cal_status_str(cal_status))
+
+def set_temp_compensation(ph, temperature):
+    assert isinstance(temperature, float)
+
+    logging.info("Old temperature compensation: {0:.2f} C".format(ph.read_temp_compensation()))
+    logging.info("Setting to: {0:.2f} C".format(temperature))
+    ph.set_temp_compensation(temperature)
+
+def factory_reset(ph):
+    _print_device_info(ph)
+    logging.info("Resetting pH sensor to factory defaults")
+    ph.factory_reset()
+    _print_device_info(ph)
+
+def print_info(ph):
+    _print_device_info(ph)
+    print "Current reading: {0}".format(ph.read_ph())
+
+
+def main(args):
+    parser = argparse.ArgumentParser(prog='growd-tempsender')
+    parser.add_argument('-v', '--verbose', action='store_true', help='print uninteresting info')
+    parser.add_argument('--sampling-period', type=int, default=SAMPLING_PERIOD, help='take temp/hum measurement every ? seconds')
+    parser.add_argument('-c', '--config', type=str, help='path to configuration file')
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument('--info', action='store_true', help='show sensor information')
+    group.add_argument('--calibrate', action='store_true', help='interactive pH sensor calibration')
+    group.add_argument('--factory-reset', action='store_true', help='reset calibration, temperature and led state')
+    group.add_argument('--temp-compensation', type=float, help='change temperature compensation', metavar='TEMPERATURE')
+    opts = parser.parse_args(args)
+
+    growd.utils.setup_logging(verbose=opts.verbose)
+
+    if opts.config:
+        with open(opts.config, 'r') as fh:
+            config = yaml.safe_load(fh)
+
+        metrics_receivers = init_metrics(config)
+    else:
+        metrics_receivers = []
+
+    with Raspberry() as rpi:
+        rpi.i2c_setup()
+        ph = EzoPH(rpi.i2c[1])
+
+        if opts.calibrate:
+            calibrate(ph)
+        elif opts.info:
+            print_info(ph)
+        elif opts.temp_compensation is not None:
+            set_temp_compensation(ph, opts.temp_compensation)
+        elif opts.factory_reset:
+            factory_reset(ph)
+        else:
+            while True:
+                try:
+                    read_and_send_sensors(ph, metrics_receivers)
+                    time.sleep(opts.sampling_period)
+                except KeyboardInterrupt:
+                    logging.info('User requested exit')
+                    break
+                except Exception as e:
+                    logging.exception('Main loop error')
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

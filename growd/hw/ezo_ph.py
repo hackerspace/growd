@@ -15,8 +15,8 @@ class EzoPH(object):
 
     _DEFAULT_ADDRESS = 0x63
     _LONG_WAIT_TIME = 1.0
-    _SHORT_WAIT_TIME = 0.5
-    _CAL_WAIT_TIME = 1.6
+    _SHORT_WAIT_TIME = 0.5 # manual: 0.3
+    _CAL_WAIT_TIME = 2.0 # manual: 1.6
 
     Slope = namedtuple('Slope', ['acid', 'base'])
     Info = namedtuple('Info', ['dev_type', 'fw_version'])
@@ -111,15 +111,19 @@ class EzoPH(object):
         response = self.query("CAL,?", parse_prefix="CAL", parse_args=1)
         return int(response[0])
 
-    def set_led(self, state):
-        cmd = "L,{0}".format("1" if state else "0")
-        self.query(cmd)
+    def read_temp_compensation(self):
+        response = self.query("T,?", parse_prefix="T", parse_args=1)
+        return float(response[0])
 
     def set_temp_compensation(self, temp=None):
         if not temp:
             temp = 25.0
 
         cmd = "T,{0:.2f}".format(temp)
+        self.query(cmd)
+
+    def set_led(self, state):
+        cmd = "L,{0}".format("1" if state else "0")
         self.query(cmd)
 
     def sleep(self):
