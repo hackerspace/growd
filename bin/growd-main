@@ -36,6 +36,7 @@ def read_and_send_sensors(temp_sensor, hum_sensor, relay_state, metrics_receiver
     sensors = {
         'temp': temp,
         'hum': hum,
+        'dew': growd.utils.dew_point(temp, hum),
     }
 
     for m in metrics_receivers:

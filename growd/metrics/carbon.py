@@ -1,8 +1,6 @@
 import time
 import socket
 
-from growd.utils import dew_point
-
 class CarbonMetrics(object):
     def __init__(self, host, ident=None, port=2003):
         self.host = host
@@ -12,7 +10,6 @@ class CarbonMetrics(object):
             self.ident += ("." + ident)
 
     def send(self, sensors, relays):
-        sensors['dew'] = dew_point(sensors['temp'], sensors['hum'])
         ts = int(time.time())
         msg = ""
 
