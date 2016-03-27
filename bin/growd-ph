@@ -10,32 +10,10 @@ import yaml
 
 from growd.hw.raspberry import Raspberry
 from growd.hw.ezo_ph import EzoPH
-from growd.metrics.simple import SimpleMetrics
-from growd.metrics.carbon import CarbonMetrics
+from growd.metrics import MetricsSender
 import growd.utils
 
 SAMPLING_PERIOD = 2 # seconds
-
-def init_metrics(config):
-    metrics = []
-
-    for m in config.get('metrics', []):
-        if m['type'] == 'simple':
-            metrics.append(SimpleMetrics(m['url']))
-        elif m['type'] == 'carbon':
-            metrics.append(CarbonMetrics(m['host'], ident=m.get('id')))
-
-    return metrics
-
-def read_and_send_sensors(ph_sensor, metrics_receivers):
-    ph = ph_sensor.read_ph()
-    logging.info('pH: %.2f' % ph)
-
-    sensors = {'ph': ph}
-
-    for m in metrics_receivers:
-        #TODO: try-catch?
-        m.send(sensors.copy(), {})
 
 def _wait_and_measure(ph, wait_sec=3*60, reading_interval=15):
     while wait_sec > 0:
@@ -130,26 +108,29 @@ def main(args):
         with open(opts.config, 'r') as fh:
             config = yaml.safe_load(fh)
 
-        metrics_receivers = init_metrics(config)
+        metrics = MetricsSender(config)
     else:
-        metrics_receivers = []
+        metrics = None
 
     with Raspberry() as rpi:
         rpi.i2c_setup()
-        ph = EzoPH(rpi.i2c[1])
+        ph_sensor = EzoPH(rpi.i2c[1])
 
         if opts.calibrate:
-            calibrate(ph)
+            calibrate(ph_sensor)
         elif opts.info:
-            print_info(ph)
+            print_info(ph_sensor)
         elif opts.temp_compensation is not None:
-            set_temp_compensation(ph, opts.temp_compensation)
+            set_temp_compensation(ph_sensor, opts.temp_compensation)
         elif opts.factory_reset:
-            factory_reset(ph)
+            factory_reset(ph_sensor)
         else:
             while True:
                 try:
-                    read_and_send_sensors(ph, metrics_receivers)
+                    ph = ph_sensor.read_ph()
+                    logging.info('pH: %.2f' % ph)
+                    if metrics:
+                        metrics.send({'ph': ph})
                     time.sleep(opts.sampling_period)
                 except KeyboardInterrupt:
                     logging.info('User requested exit')

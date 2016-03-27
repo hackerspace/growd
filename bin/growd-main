@@ -11,37 +11,24 @@ import yaml
 from growd.hw.raspberry import Raspberry
 from growd.hw.sht21 import SHT21
 from growd.hw.relay import Relay
-from growd.metrics.simple import SimpleMetrics
-from growd.metrics.carbon import CarbonMetrics
+from growd.metrics import MetricsSender
 import growd.utils
 
 SAMPLING_PERIOD = 2 # seconds
 
-def init_metrics(config):
-    metrics = []
+def read_and_send_sensors(temp_sensor, hum_sensor, relay_state, metrics):
+    readings = {
+            'temp': temp_sensor.read_temperature(),
+            'hum': hum_sensor.read_humidity(),
+        }
+    readings['dew'] = growd.utils.dew_point(readings['temp'], readings['hum'])
 
-    for m in config.get('metrics', []):
-        if m['type'] == 'simple':
-            metrics.append(SimpleMetrics(m['url']))
-        elif m['type'] == 'carbon':
-            metrics.append(CarbonMetrics(m['host'], ident=m.get('id')))
+    for name, state in relay_state.items():
+        val = 1.0 if state else 0.0
+        readings['relay.' + name] = val
 
-    return metrics
-
-def read_and_send_sensors(temp_sensor, hum_sensor, relay_state, metrics_receivers):
-    temp = temp_sensor.read_temperature()
-    hum = hum_sensor.read_humidity()
-    logging.debug('T: %.2f C, H: %.2f %%' % (temp, hum))
-
-    sensors = {
-        'temp': temp,
-        'hum': hum,
-        'dew': growd.utils.dew_point(temp, hum),
-    }
-
-    for m in metrics_receivers:
-        #TODO: try-catch?
-        m.send(sensors.copy(), relay_state.copy())
+    logging.debug('T: %.2f C, H: %.2f %%' % (readings['temp'], readings['hum']))
+    metrics.send(readings)
 
 
 def main(args):
@@ -60,7 +47,7 @@ def main(args):
     with open(opts.config, 'r') as fh:
         config = yaml.safe_load(fh)
 
-    metrics_receivers = init_metrics(config)
+    metrics = MetricsSender(config)
 
     with Raspberry() as rpi:
         rpi.i2c_setup()
@@ -103,7 +90,7 @@ def main(args):
                         relay_state[r] = False
 
                 try:
-                    read_and_send_sensors(sht21, sht21, relay_state, metrics_receivers)
+                    read_and_send_sensors(sht21, sht21, relay_state, metrics)
                 except:
                     logging.exception('Failed to read sensors')
 
