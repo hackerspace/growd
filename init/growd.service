@@ -3,10 +3,12 @@ Description=Plant monitoring and control daemon
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/growd-main
+ExecStart=/usr/bin/growd-main --no-log-time -c /etc/growd.yml
 Restart=on-failure
 RestartSec=10
 #WatchdogSec=
+StandardOutput=syslog
+StandardError=syslog
 
 [Install]
 WantedBy=multi-user.target

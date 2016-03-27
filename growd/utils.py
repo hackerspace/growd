@@ -16,11 +16,14 @@ def dew_point(temperature, humidity):
     gamma = math.log(humidity / 100.0) + ((magnus_beta * temperature) / (magnus_lambda + temperature))
     return (magnus_lambda * gamma) / (magnus_beta - gamma)
 
-def setup_logging(filename=None, verbose=False):
+def setup_logging(filename=None, verbose=False, timestamp=True):
+    format_notime = '%(levelname)-7s %(name)-8s %(message)s'
+    format_full = '%(asctime)s ' + format_notime
     fmt = logging.Formatter(
-            fmt='%(asctime)s %(levelname)-7s %(name)-8s %(message)s',
+            fmt=(format_full if timestamp else format_notime),
             datefmt='%Y-%m-%d %H:%M:%S'
         )
+
     root = logging.getLogger('')
     root.setLevel(logging.DEBUG)
 
@@ -33,6 +36,10 @@ def setup_logging(filename=None, verbose=False):
     requests.setLevel(logging.WARNING)
 
     if filename:
+        fmt = logging.Formatter(
+                fmt=format_full,
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
         log_file = logging.FileHandler(filename=filename)
         log_file.setFormatter(fmt)
         log_file.setLevel(logging.DEBUG)

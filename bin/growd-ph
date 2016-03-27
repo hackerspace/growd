@@ -93,6 +93,7 @@ def print_info(ph):
 def main(args):
     parser = argparse.ArgumentParser(prog='growd-tempsender')
     parser.add_argument('-v', '--verbose', action='store_true', help='print uninteresting info')
+    parser.add_argument('--no-log-time', action='store_true', help="don't log timestamps to stderr")
     parser.add_argument('--sampling-period', type=int, default=SAMPLING_PERIOD, help='take temp/hum measurement every ? seconds')
     parser.add_argument('-c', '--config', type=str, help='path to configuration file')
     group = parser.add_mutually_exclusive_group(required=False)
@@ -102,7 +103,7 @@ def main(args):
     group.add_argument('--temp-compensation', type=float, help='change temperature compensation', metavar='TEMPERATURE')
     opts = parser.parse_args(args)
 
-    growd.utils.setup_logging(verbose=opts.verbose)
+    growd.utils.setup_logging(verbose=opts.verbose, timestamp=(not opts.no_log_time))
 
     if opts.config:
         with open(opts.config, 'r') as fh:

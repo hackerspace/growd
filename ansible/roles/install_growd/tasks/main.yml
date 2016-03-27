@@ -6,4 +6,28 @@
   args:
     chdir: "{{ repo_path }}"
 
-# copy systemd
+- name: copy configuration file
+  copy:
+    src: "{{ config_file }}"
+    dest: /etc/growd.yml
+  when: config_file is defined
+  notify: restart growd
+
+- name: copy systemd service file
+  copy:
+    src: "{{ repo_path }}/init/growd.service"
+    dest: /etc/systemd/system/growd.service
+    remote_src: true
+  notify: systemctl daemon-reload
+
+- name: enable and start service
+  service:
+    name: growd
+    state: started
+    enabled: yes
+
+- name: link /usr/local/bin/growd-main to /usr/bin
+  file:
+    src: /usr/local/bin/growd-main
+    dest: /usr/bin/growd-main
+    state: link

@@ -14,7 +14,7 @@
 - name: create git repo - mkdir
   file: path={{ deployed_git_dir }} state=directory
 
-- name: create git repo - mkdir
+- name: create git repo - git init
   command: git init
   args:
     chdir: "{{ deployed_git_dir }}"
