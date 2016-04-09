@@ -63,7 +63,7 @@ class SHT21(object):
     def read_humidity(self):
         """Reads the humidity from the sensor.  Note that this call blocks
         for ~30ms to allow the sensor to return the data"""
-        self.i2c.set_address(_self.I2C_ADDRESS)
+        self.i2c.set_address(self._I2C_ADDRESS)
         self.i2c.write(chr(self._TRIGGER_HUMIDITY_NO_HOLD))
         time.sleep(self._HUMIDITY_WAIT_TIME)
         data = self.i2c.read(3)
