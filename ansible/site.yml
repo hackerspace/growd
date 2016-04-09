@@ -20,3 +20,11 @@
   sudo_user: root
   roles:
   - { role: install_growd, repo_path: "/home/pi/growd" }
+
+- name: install ssh tunnel
+  hosts: all
+  sudo: true
+  sudo_user: root
+  roles:
+  - role: ssh_portfwd
+    when: setup_portfwd is defined and setup_portfwd == true

@@ -1,0 +1,12 @@
+---
+- name: install systemd unit file
+  template:
+    src: ssh-portfwd.service.j2
+    dest: /etc/systemd/system/{{ ssh_portfwd_unit_name }}.service
+  notify: systemctl daemon-reload
+
+- name: enable and start service
+  service:
+    name: "{{ ssh_portfwd_unit_name }}"
+    state: started
+    enabled: yes

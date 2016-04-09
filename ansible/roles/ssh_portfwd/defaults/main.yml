@@ -1,0 +1,8 @@
+---
+ssh_portfwd_unit_name: growd-portfwd
+ssh_portfwd_description: SSH port forwarding for growd and graphite
+ssh_portfwd_local_port: 2003
+ssh_portfwd_remote_host: example.org
+ssh_portfwd_remote_port: 2003
+ssh_portfwd_remote_user: root
+ssh_portfwd_service_user: root

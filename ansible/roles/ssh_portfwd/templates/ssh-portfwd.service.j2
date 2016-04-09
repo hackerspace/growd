@@ -1,0 +1,15 @@
+[Unit]
+Description={{ ssh_portfwd_description }}
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -N -L {{ ssh_portfwd_local_port }}:localhost:{{ ssh_portfwd_remote_port }} {{ ssh_portfwd_remote_user }}@{{ ssh_portfwd_remote_host }}
+Restart=on-failure
+RestartSec=60
+StandardOutput=syslog
+StandardError=syslog
+User={{ ssh_portfwd_service_user }}
+
+[Install]
+WantedBy=multi-user.target
