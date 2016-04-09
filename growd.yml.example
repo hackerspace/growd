@@ -5,6 +5,9 @@ metrics:
   - type: carbon
     id: greenhouse1
     host: 127.0.0.1
+sensors:
+  - sht21
+  - ezo_ph
 relays:
   - name: pump
     pin: 22

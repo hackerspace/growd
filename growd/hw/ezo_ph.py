@@ -141,6 +141,9 @@ class EzoPH(object):
     def calibrate_high(self, value=10.00):
         self.query("CAL,HIGH,{0:.2f}".format(value), wait=self._CAL_WAIT_TIME)
 
+    def read_sensor(self):
+        return {'ph': self.read_ph()}
+
 if __name__ == '__main__':
     from growd.hw.raspberry import Raspberry
 

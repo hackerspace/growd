@@ -10,24 +10,24 @@ import yaml
 
 from growd.hw.raspberry import Raspberry
 from growd.hw.sht21 import SHT21
+from growd.hw.ezo_ph import EzoPH
 from growd.hw.relay import Relay
 from growd.metrics import MetricsSender
 import growd.utils
 
 SAMPLING_PERIOD = 2 # seconds
 
-def read_and_send_sensors(temp_sensor, hum_sensor, relay_state, metrics):
-    readings = {
-            'temp': temp_sensor.read_temperature(),
-            'hum': hum_sensor.read_humidity(),
-        }
-    readings['dew'] = growd.utils.dew_point(readings['temp'], readings['hum'])
+def read_and_send_sensors(sensors, relay_state, metrics):
+    readings = {}
+    for s in sensors:
+        readings.update(s.read_sensor())
+
+    logging.debug(', '.join('%s: %.2f' % (k,v) for (k,v) in readings.items()))
 
     for name, state in relay_state.items():
         val = 1.0 if state else 0.0
         readings['relay.' + name] = val
 
-    logging.debug('T: %.2f C, H: %.2f %%' % (readings['temp'], readings['hum']))
     metrics.send(readings)
 
 
@@ -52,11 +52,21 @@ def main(args):
 
     with Raspberry() as rpi:
         rpi.i2c_setup()
-        sht21 = SHT21(rpi.i2c[1])
+
+        # TODO: needs to be way more generic
+        sensors = []
+        for s in config.get('sensors', []):
+            if s == 'sht21':
+                sensors.append(SHT21(rpi.i2c[1]))
+            elif s == 'ezo_ph':
+                sensors.append(EzoPH(rpi.i2c[1]))
+            else:
+                logging.critical('Unknown sensor: {0}'.format(s))
+                sys.exit(1)
 
         relay = {}
         relay_state = {}
-        for r in config['relays']:
+        for r in config.get('relays', []):
             relay[r['name']] = Relay(rpi, r['pin'])
             relay_state[r['name']] = False
 
@@ -91,7 +101,7 @@ def main(args):
                         relay_state[r] = False
 
                 try:
-                    read_and_send_sensors(sht21, sht21, relay_state, metrics)
+                    read_and_send_sensors(sensors, relay_state, metrics)
                 except:
                     logging.exception('Failed to read sensors')
 

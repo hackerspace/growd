@@ -26,6 +26,8 @@
 
 import time
 
+import growd.utils
+
 class SHT21(object):
     """Class to read temperature and humidity from SHT21, much of class was
     derived from: #http://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/Humidity/Sensirion_Humidity_SHT21_Datasheet_V3.pdf
@@ -69,6 +71,14 @@ class SHT21(object):
         data = self.i2c.read(3)
         if _calculate_checksum(data,2) == ord(data[2]):
             return _get_humidity_from_buffer(data)
+
+    def read_sensor(self):
+        readings = {
+            'temp': self.read_temperature(),
+            'hum': self.read_humidity(),
+        }
+        readings['dew'] = growd.utils.dew_point(readings['temp'], readings['hum'])
+        return readings
 
 
 def _calculate_checksum(data, nbrOfBytes):
