@@ -40,7 +40,14 @@
     val: "on"
   register: dtparams
 
+- name: load i2c-dev module at startup
+  lineinfile:
+    dest: /etc/modules
+    regexp: "^i2c-dev"
+    line: "i2c-dev"
+  register: i2cdev
+
 - pause: prompt="Device tree configuration changed - reboot recommended"
-  when: dtparams.changed
+  when: dtparams.changed or i2cdev.changed
 
 #TODO: resize partition
