@@ -10,6 +10,7 @@
   copy:
     src: "{{ config_file }}"
     dest: /etc/growd.yml
+    backup: yes
   when: config_file is defined
   notify: restart growd
 
