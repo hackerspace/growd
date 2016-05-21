@@ -14,6 +14,7 @@ from growd.metrics import MetricsSender
 import growd.utils
 
 SAMPLING_PERIOD = 2 # seconds
+SETTLE_TIME = 3 # minutes
 
 def _wait_and_measure(ph, wait_sec=3*60, reading_interval=15):
     while wait_sec > 0:
@@ -21,7 +22,7 @@ def _wait_and_measure(ph, wait_sec=3*60, reading_interval=15):
         time.sleep(min(wait_sec, reading_interval))
         wait_sec -= reading_interval
 
-def _calibrate_point(ph, point_name, point_near, callback, optional=False):
+def _calibrate_point(ph, point_name, point_near, callback, optional=False, wait_sec=SETTLE_TIME*60):
     print ("*** Rinse the probe and sumberge it into the {0}POINT ({1}) solution. "
            "Enter its pH value below.".format(point_name.upper(), point_near))
     if optional:
@@ -32,8 +33,8 @@ def _calibrate_point(ph, point_name, point_near, callback, optional=False):
         return
     reference_ph = float(reference_ph)
     print ""
-    print "Waiting 3 minutes before calibration. Press Ctrl-C to cancel."
-    _wait_and_measure(ph)
+    print "Waiting {0} minutes before calibration. Press Ctrl-C to cancel.".format(wait_sec / 60)
+    _wait_and_measure(ph, wait_sec)
     callback(reference_ph)
     print "Calibrated against {0}point pH = {1}".format(point_name.lower(), reference_ph)
     print ""
@@ -59,15 +60,16 @@ def _print_device_info(ph):
     print "  Calibration slope: acid: {0}, base: {1}".format(slope.acid, slope.base)
     print "  Temperature compensation: {0} C".format(temp_compensation)
 
-def calibrate(ph):
+def calibrate(ph, settle_minutes):
     reference_ph = None
+    wait_sec = settle_minutes * 60
 
     _print_device_info(ph)
     print ""
     print "!!! Calibrating the midpoint resets all previous calibration data."
-    _calibrate_point(ph, "mid", 7, ph.calibrate_mid, optional=False)
-    _calibrate_point(ph, "low", 4, ph.calibrate_low, optional=True)
-    _calibrate_point(ph, "high", 10, ph.calibrate_low, optional=True)
+    _calibrate_point(ph, "mid", 7, ph.calibrate_mid, optional=False, wait_sec=wait_sec)
+    _calibrate_point(ph, "low", 4, ph.calibrate_low, optional=True, wait_sec=wait_sec)
+    _calibrate_point(ph, "high", 10, ph.calibrate_low, optional=True, wait_sec=wait_sec)
     print "*** Sensor has been calibrated!"
     cal_status = ph.read_calibration_status()
     print "Calibration: {0}".format(_cal_status_str(cal_status))
@@ -95,6 +97,7 @@ def main(args):
     parser.add_argument('-v', '--verbose', action='store_true', help='print uninteresting info')
     parser.add_argument('--no-log-time', action='store_true', help="don't log timestamps to stderr")
     parser.add_argument('--sampling-period', type=int, default=SAMPLING_PERIOD, help='take temp/hum measurement every ? seconds')
+    parser.add_argument('--settle-time', type=int, default=SETTLE_TIME, help='minutes to wait for readings to settle during calibration')
     parser.add_argument('-c', '--config', type=str, help='path to configuration file')
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('--info', action='store_true', help='show sensor information')
@@ -118,7 +121,7 @@ def main(args):
         ph_sensor = EzoPH(rpi.i2c[1])
 
         if opts.calibrate:
-            calibrate(ph_sensor)
+            calibrate(ph_sensor, opts.settle_time)
         elif opts.info:
             print_info(ph_sensor)
         elif opts.temp_compensation is not None:
