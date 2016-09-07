@@ -93,7 +93,7 @@ def print_info(ph):
 
 
 def main(args):
-    parser = argparse.ArgumentParser(prog='growd-tempsender')
+    parser = argparse.ArgumentParser(prog='growd-ph')
     parser.add_argument('-v', '--verbose', action='store_true', help='print uninteresting info')
     parser.add_argument('--no-log-time', action='store_true', help="don't log timestamps to stderr")
     parser.add_argument('--sampling-period', type=int, default=SAMPLING_PERIOD, help='take temp/hum measurement every ? seconds')
