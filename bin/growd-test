@@ -4,17 +4,29 @@ import sys
 import time
 import logging
 
-from growd.hw.watchdog import Watchdog
+from growd.hw.mcp23009 import MCP23009
+from growd.hw.raspberry import Raspberry
+from growd.hw.ds18b20 import DS18B20
 import growd.utils
 
 def main():
     growd.utils.setup_logging(verbose=True)
 
-    with Watchdog() as dog:
-        for i in range(30):
-            logging.info('Feeding the dog')
-            dog.keepalive()
-            time.sleep(2)
+    with Raspberry() as rpi:
+        rpi.i2c_setup()
+        m = MCP23009(rpi.i2c[1])
+        d = DS18B20()
+
+        for i in range(8):
+            m.gpio_setup(i, True)
+
+        while True:
+            for i in range(8):
+                print("Temp: %s" % d.read_temperature())
+                print("Pin %s" % i)
+                m.gpio_set(i, True)
+                m.gpio_set((i-1)%8, False)
+                time.sleep(0.25)
 
 
 if __name__ == '__main__':
